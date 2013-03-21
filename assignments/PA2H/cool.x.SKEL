@@ -40,33 +40,36 @@ main = do
 
 -- Some action helpers:
 
--- The state we want to carry around as we parse
+-- The state we want to carry around as we lex
 --     You may need to alter this!
 --     For now just an integer representing the current line number
 --         some tables representing the current string tables and
 --         a string which you (may) use to buffer a string.
-type ParseState = (Int,Tables,String)
+type LexState = (Int,Tables,String)
 
 --Sets the initial state of the parser
 initialState :: ParseState
 initialState = (1,initTables,"")
 
 --Get the current string tables
-tables :: ParseState -> Tables
+tables :: LexState -> Tables
 tables (_,ts,_) = ts
 
---Get the current line number from parse state
-line_number :: ParseState -> Int
+--Get the current line number from the lex state
+line_number :: LexState -> Int
 line_number (l,_,_) = l
 
+add_line :: LexState -> LexState
+add_line (l,t,s) = (l+1,t,s)
 
--- A triple of line number tables at a point in the parse and a token
+
+-- A triple of line number tables at a point in the lex and a token
 -- this is all the information you return about a token and it's context
 type TokenLine = (Int,Tables,Token)
 
 --Type of token action in the gscan wrapper
 type TokenAction =  AlexPosn                            --Alex internal 
-position in parsing not used here
+position in lexing not used here
                     -> Char                             -- 1 char of 
 lookahead
                     -> String                           -- The rest of 
@@ -78,7 +81,7 @@ continuation function
                                                         -- What to do 
 after this token is lexed.
                     -> (Int,ParseState)                 -- The internal 
-alex state number and the users parse state
+alex state number and the users lex state
                     -> [TokenLine]                      -- The resulting 
 list of tokens
 
@@ -101,10 +104,10 @@ ignore :: TokenAction
 ignore _ _ _ _ cont (s,ps) = cont (s,ps)
 
 
--- Add a newline to a token action
+-- Add a new line when doing a token action
 newline :: TokenAction -> TokenAction
-newline act p c s i cont (sc,ps) = act p c s i cont (sc,newps)
-  where newps = add_line ps
+newline act p c s i cont (sc,ls) = act p c s i cont (sc,newls)
+  where newls = add_line ls
 
 
 --The stop function called when the lexer reaches an EOF
@@ -112,7 +115,8 @@ newline act p c s i cont (sc,ps) = act p c s i cont (sc,newps)
 stop :: AlexPosn  -- Internal alex position at EOF do not use 
 	-> Char   -- lookahead char do not use
 	-> String -- any text still unmatched when EOF reached
-	-> (Int,ParseState) -- Internal and user state of lexer
+	-> (Int,LexState) -- Alex state number and user state of lexer 
+when EOF reached.
 	-> [TokenLine]      -- List of tokens to return.
 stop _ _ "" (0,s) = []      -- No error at end of lexing.
 
