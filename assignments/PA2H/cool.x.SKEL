@@ -1,0 +1,120 @@
+{
+module Main (main) where
+
+import Token(Token(..),display)
+import StringTab
+
+import System.Environment
+import System.IO
+
+
+
+}
+
+%wrapper "gscan"
+
+@darrow        =  \=\>
+
+tokens :-
+
+
+--  Put your rules here
+
+  --Multichar operations
+<0>@darrow                           { tok DARROW }
+
+{
+
+--Do not change the main function definiton else your program may not submit properly
+main = do
+  args <- getArgs
+  filename <- return (head args)
+  putStrLn ("#name " ++ show filename)
+  h <- openFile filename ReadMode
+  s <- hGetContents h
+  sequence $ map (putStrLn.show') (alexGScan stop initialState s)
+  where
+    show' :: TokenLine -> String
+    show' (l,ts,s) = "#" ++ (show l) ++ " " ++ (display ts s)
+
+
+-- Some action helpers:
+
+-- The state we want to carry around as we parse
+--     You may need to alter this!
+--     For now just an integer representing the current line number
+--         some tables representing the current string tables and
+--         a string which you (may) use to buffer a string.
+type ParseState = (Int,Tables,String)
+
+--Sets the initial state of the parser
+initialState :: ParseState
+initialState = (1,initTables,"")
+
+--Get the current string tables
+tables :: ParseState -> Tables
+tables (_,ts,_) = ts
+
+--Get the current line number from parse state
+line_number :: ParseState -> Int
+line_number (l,_,_) = l
+
+
+-- A triple of line number tables at a point in the parse and a token
+-- this is all the information you return about a token and it's context
+type TokenLine = (Int,Tables,Token)
+
+--Type of token action in the gscan wrapper
+type TokenAction =  AlexPosn                            --Alex internal 
+position in parsing not used here
+                    -> Char                             -- 1 char of 
+lookahead
+                    -> String                           -- The rest of 
+the string not yet tokenized
+                    -> Int                              -- The length of 
+matched text.
+                    -> ((Int,ParseState)->[TokenLine])  -- A 
+continuation function
+                                                        -- What to do 
+after this token is lexed.
+                    -> (Int,ParseState)                 -- The internal 
+alex state number and the users parse state
+                    -> [TokenLine]                      -- The resulting 
+list of tokens
+
+--Helper function to create token action from a token constructors
+
+toks :: (String -> Token) -> TokenAction          
+toks f _ _ str len cont (sc,state) = (line, ts, f match) : cont (sc,state)
+  where line = line_number state
+        match = take len str
+        ts = tables state
+
+--Helper function to create token action from a given token
+
+tok :: Token -> TokenAction
+tok t = toks (\s -> t)
+
+-- A trivial token ation which ignores this token
+
+ignore :: TokenAction
+ignore _ _ _ _ cont (s,ps) = cont (s,ps)
+
+
+-- Add a newline to a token action
+newline :: TokenAction -> TokenAction
+newline act p c s i cont (sc,ps) = act p c s i cont (sc,newps)
+  where newps = add_line ps
+
+
+--The stop function called when the lexer reaches an EOF
+--You may need to alter this
+stop :: AlexPosn  -- Internal alex position at EOF do not use 
+	-> Char   -- lookahead char do not use
+	-> String -- any text still unmatched when EOF reached
+	-> (Int,ParseState) -- Internal and user state of lexer
+	-> [TokenLine]      -- List of tokens to return.
+stop _ _ "" (0,s) = []      -- No error at end of lexing.
+
+
+}
