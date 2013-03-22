@@ -48,7 +48,7 @@ main = do
 type LexState = (Int,Tables,String)
 
 --Sets the initial state of the parser
-initialState :: ParseState
+initialState :: LexState
 initialState = (1,initTables,"")
 
 --Get the current string tables
@@ -68,22 +68,16 @@ add_line (l,t,s) = (l+1,t,s)
 type TokenLine = (Int,Tables,Token)
 
 --Type of token action in the gscan wrapper
-type TokenAction =  AlexPosn                            --Alex internal 
-position in lexing not used here
-                    -> Char                             -- 1 char of 
-lookahead
-                    -> String                           -- The rest of 
-the string not yet tokenized
-                    -> Int                              -- The length of 
-matched text.
-                    -> ((Int,ParseState)->[TokenLine])  -- A 
-continuation function
-                                                        -- What to do 
-after this token is lexed.
-                    -> (Int,ParseState)                 -- The internal 
-alex state number and the users lex state
-                    -> [TokenLine]                      -- The resulting 
-list of tokens
+type TokenAction =  AlexPosn                            -- Alex internal position in 
+                                                        --   lexing not used here
+                    -> Char                             -- 1 char of lookahead
+                    -> String                           -- The rest of the string not yet tokenized
+                    -> Int                              -- The length of matched text.
+                    -> ((Int,LexState)->[TokenLine])  -- A continuation function
+                                                        -- What to do after this token is lexed.
+                    -> (Int,LexState)                 -- The internal alex state number and 
+                                                        --   the users lex state
+                    -> [TokenLine]                      -- The resulting list of tokens
 
 --Helper function to create token action from a token constructors
 
@@ -112,12 +106,12 @@ newline act p c s i cont (sc,ls) = act p c s i cont (sc,newls)
 
 --The stop function called when the lexer reaches an EOF
 --You may need to alter this
-stop :: AlexPosn  -- Internal alex position at EOF do not use 
-	-> Char   -- lookahead char do not use
-	-> String -- any text still unmatched when EOF reached
+stop :: AlexPosn    -- Internal alex position at EOF do not use 
+	-> Char           -- lookahead char do not use
+	-> String         -- any text still unmatched when EOF reached
 	-> (Int,LexState) -- Alex state number and user state of lexer 
-when EOF reached.
-	-> [TokenLine]      -- List of tokens to return.
+                    --  when EOF reached.
+	-> [TokenLine]    -- List of tokens to return.
 stop _ _ "" (0,s) = []      -- No error at end of lexing.
 
 
